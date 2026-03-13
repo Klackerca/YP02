@@ -1,0 +1,58 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+
+<main class="container page">
+  <section class="panel form-panel">
+    <h1>Купить билет</h1>
+    <p><strong><%= attraction.name %></strong> · Возраст: <%= attraction.age_group_title %></p>
+    <% if (Number(attraction.active_discount_percent) > 0) { %>
+      <p>
+        Цена: <span class="old-price"><%= Number(attraction.ticket_price).toFixed(2) %> ₽</span>
+        <strong><%= Number(attraction.final_ticket_price).toFixed(2) %> ₽</strong>
+        <span class="discount-badge">Акция -<%= Number(attraction.active_discount_percent).toFixed(0) %>%</span>
+      </p>
+    <% } else { %>
+      <p>Цена: <strong><%= Number(attraction.ticket_price).toFixed(2) %> ₽</strong></p>
+    <% } %>
+
+    <% if (success) { %>
+      <p class="success">Заказ успешно оформлен. Ждём вас в парке!</p>
+    <% } %>
+
+    <form class="stack-form" method="post" action="/tickets/buy/<%= attraction.id %>">
+      <label>Ваше имя
+        <input type="text" name="customer_name" required />
+      </label>
+
+      <label>Телефон
+        <input type="text" name="phone" required placeholder="+7 (___) ___-__-__" />
+      </label>
+
+      <label>Количество билетов
+        <select name="quantity" required>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="6">6</option>
+          <option value="7">7</option>
+          <option value="8">8</option>
+          <option value="9">9</option>
+          <option value="10">10</option>
+        </select>
+      </label>
+
+      <label>Дата посещения
+        <input type="date" name="visit_date" required />
+      </label>
+
+      <div class="actions-row">
+        <button class="btn" type="submit">Оформить покупку</button>
+        <a class="btn btn-outline" href="/attractions">Вернуться к аттракционам</a>
+      </div>
+    </form>
+  </section>
+</main>
+
+<%- include('../partials/footer') %>

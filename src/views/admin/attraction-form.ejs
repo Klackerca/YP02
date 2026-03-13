@@ -1,0 +1,42 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+
+<main class="container page">
+  <section class="panel form-panel">
+    <h1><%= attraction ? 'Редактирование аттракциона' : 'Новый аттракцион' %></h1>
+
+    <form method="post" action="<%= action %>" class="stack-form">
+      <label>Название аттракциона
+        <input required type="text" name="name" value="<%= attraction?.name || '' %>" />
+      </label>
+
+      <label>Стоимость билета
+        <input required type="number" min="0" step="0.01" name="ticket_price" value="<%= attraction?.ticket_price || '' %>" />
+      </label>
+
+      <label>Возрастные границы (ComboBox)
+        <select required name="age_group_code">
+          <option value="">Выберите группу</option>
+          <% ageGroups.forEach(group => { %>
+            <option value="<%= group.code %>" <%= attraction?.age_group_code === group.code ? 'selected' : '' %>><%= group.title %></option>
+          <% }) %>
+        </select>
+      </label>
+
+      <label>Количество посадочных мест
+        <input required type="number" min="1" name="seats_count" value="<%= attraction?.seats_count || '' %>" />
+      </label>
+
+      <label>URL изображения
+        <input type="url" name="image_url" value="<%= attraction?.image_url || '' %>" />
+      </label>
+
+      <div class="actions-row">
+        <button class="btn" type="submit">Сохранить</button>
+        <a class="btn btn-outline" href="/admin/attractions">Отмена</a>
+      </div>
+    </form>
+  </section>
+</main>
+
+<%- include('../partials/footer') %>

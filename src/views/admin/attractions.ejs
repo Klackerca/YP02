@@ -1,0 +1,59 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+
+<main class="container page">
+  <section class="panel">
+    <div class="actions-row">
+      <h1>Управление аттракционами</h1>
+      <a class="btn" href="/admin/attractions/new">+ Новый аттракцион</a>
+    </div>
+
+    <form class="filters" method="get" action="/admin/attractions">
+      <input type="text" name="name" placeholder="Название" value="<%= filters.name %>" />
+      <select name="ageGroup">
+        <option value="">Возраст (все)</option>
+        <% ageGroups.forEach(group => { %>
+          <option value="<%= group.code %>" <%= filters.ageGroup === group.code ? 'selected' : '' %>><%= group.title %></option>
+        <% }) %>
+      </select>
+      <input type="number" name="minPrice" min="0" step="0.01" placeholder="Цена от" value="<%= filters.minPrice ?? '' %>" />
+      <input type="number" name="maxPrice" min="0" step="0.01" placeholder="Цена до" value="<%= filters.maxPrice ?? '' %>" />
+      <button class="btn" type="submit">Поиск</button>
+      <a class="btn btn-outline" href="/admin/attractions">Сброс</a>
+    </form>
+  </section>
+
+  <section class="panel">
+    <table>
+      <thead>
+      <tr>
+        <th>ID</th>
+        <th>Название</th>
+        <th>Цена</th>
+        <th>Возраст</th>
+        <th>Мест</th>
+        <th>Действия</th>
+      </tr>
+      </thead>
+      <tbody>
+      <% attractions.forEach(item => { %>
+        <tr>
+          <td><%= item.id %></td>
+          <td><%= item.name %></td>
+          <td><%= Number(item.ticket_price).toFixed(2) %> ₽</td>
+          <td><%= item.age_group_title %></td>
+          <td><%= item.seats_count %></td>
+          <td class="row-actions">
+            <a class="btn btn-outline" href="/admin/attractions/<%= item.id %>/edit">Изменить</a>
+            <form method="post" action="/admin/attractions/<%= item.id %>/delete" onsubmit="return confirm('Удалить запись?');">
+              <button class="btn danger" type="submit">Удалить</button>
+            </form>
+          </td>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table>
+  </section>
+</main>
+
+<%- include('../partials/footer') %>

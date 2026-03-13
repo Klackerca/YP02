@@ -1,0 +1,61 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+
+<main class="container page">
+  <section class="hero">
+    <div>
+      <h1>Парк, где каждое посещение — событие</h1>
+      <p>Актуальные новости, удобный список аттракционов и понятные цены в одном месте.</p>
+      <div class="hero-actions">
+        <a class="btn" href="/attractions">Смотреть аттракционы</a>
+        <a class="btn btn-outline" href="/news">Читать новости</a>
+      </div>
+    </div>
+    <img src="https://parkskazka.com/local/templates/main/img/scheme/park-scheme-tochka1.jpg" alt="Парк аттракционов" />
+  </section>
+
+  <section>
+    <h2>Популярные аттракционы</h2>
+    <div class="grid cards-3">
+      <% attractions.forEach(item => { %>
+        <article class="card">
+          <img src="<%= item.image_url || 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=1200&q=80' %>" alt="<%= item.name %>" />
+          <div class="card-body">
+            <h3><%= item.name %></h3>
+            <p>Возраст: <%= item.age_group_title %></p>
+            <% if (Number(item.active_discount_percent) > 0) { %>
+              <p>
+                Билет:
+                <span class="old-price"><%= Number(item.ticket_price).toFixed(2) %> ₽</span>
+                <strong><%= Number(item.final_ticket_price).toFixed(2) %> ₽</strong>
+                <span class="discount-badge">-<%= Number(item.active_discount_percent).toFixed(0) %>%</span>
+              </p>
+            <% } else { %>
+              <p>Билет: <strong><%= Number(item.ticket_price).toFixed(2) %> ₽</strong></p>
+            <% } %>
+            <a class="btn" href="/tickets/buy/<%= item.id %>">Купить билет</a>
+          </div>
+        </article>
+      <% }) %>
+    </div>
+  </section>
+
+  <section>
+    <h2>Последние новости</h2>
+    <div class="grid cards-3">
+      <% news.forEach(item => { %>
+        <article class="card">
+          <img src="<%= item.image_url || 'https://images.unsplash.com/photo-1532453288672-3a27e9be9efd?auto=format&fit=crop&w=1200&q=80' %>" alt="<%= item.title %>" />
+          <div class="card-body">
+            <h3><%= item.title %></h3>
+            <% const plainBody = (item.body || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim(); %>
+            <p><%= plainBody.slice(0, 120) %>...</p>
+            <a class="btn btn-outline" href="/news/<%= item.id %>">Подробнее</a>
+          </div>
+        </article>
+      <% }) %>
+    </div>
+  </section>
+</main>
+
+<%- include('../partials/footer') %>

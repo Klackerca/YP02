@@ -1,0 +1,49 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+
+<main class="container page">
+  <section class="panel">
+    <h1>Аттракционы парка</h1>
+    <form class="filters" method="get" action="/attractions">
+      <input type="text" name="name" placeholder="Название" value="<%= filters.name %>" />
+
+      <select name="ageGroup">
+        <option value="">Все возрастные группы</option>
+        <% ageGroups.forEach(group => { %>
+          <option value="<%= group.code %>" <%= filters.ageGroup === group.code ? 'selected' : '' %>><%= group.title %></option>
+        <% }) %>
+      </select>
+
+      <input type="number" min="0" step="0.01" name="minPrice" placeholder="Цена от" value="<%= filters.minPrice ?? '' %>" />
+      <input type="number" min="0" step="0.01" name="maxPrice" placeholder="Цена до" value="<%= filters.maxPrice ?? '' %>" />
+      <input type="number" min="1" name="minSeats" placeholder="Мест от" value="<%= filters.minSeats ?? '' %>" />
+      <button class="btn" type="submit">Поиск</button>
+    </form>
+  </section>
+
+  <section class="grid cards-3">
+    <% attractions.forEach(item => { %>
+      <article class="card">
+        <img src="<%= item.image_url || 'https://images.unsplash.com/photo-1533910534207-90f31029a78e?auto=format&fit=crop&w=1200&q=80' %>" alt="<%= item.name %>" />
+        <div class="card-body">
+          <h3><%= item.name %></h3>
+          <p>Возраст: <%= item.age_group_title %></p>
+          <p>Посадочных мест: <%= item.seats_count %></p>
+          <% if (Number(item.active_discount_percent) > 0) { %>
+            <p>
+              Стоимость билета:
+              <span class="old-price"><%= Number(item.ticket_price).toFixed(2) %> ₽</span>
+              <strong><%= Number(item.final_ticket_price).toFixed(2) %> ₽</strong>
+              <span class="discount-badge">-<%= Number(item.active_discount_percent).toFixed(0) %>%</span>
+            </p>
+          <% } else { %>
+            <p>Стоимость билета: <strong><%= Number(item.ticket_price).toFixed(2) %> ₽</strong></p>
+          <% } %>
+          <a class="btn" href="/tickets/buy/<%= item.id %>">Купить билет</a>
+        </div>
+      </article>
+    <% }) %>
+  </section>
+</main>
+
+<%- include('../partials/footer') %>

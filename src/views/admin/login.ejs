@@ -1,0 +1,20 @@
+<%- include('../partials/head') %>
+
+<main class="container page auth-page">
+  <section class="panel auth-panel">
+    <h1>Вход администратора</h1>
+    <% if (error) { %><p class="error"><%= error %></p><% } %>
+    <form method="post" action="/admin/login" class="stack-form">
+      <label>Логин
+        <input required type="text" name="login" />
+      </label>
+      <label>Пароль
+        <input required type="password" name="password" />
+      </label>
+      <button class="btn" type="submit">Войти</button>
+      <a class="btn btn-outline" href="/">На сайт</a>
+    </form>
+  </section>
+</main>
+
+<%- include('../partials/footer') %>

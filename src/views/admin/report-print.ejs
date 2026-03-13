@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/assets/styles.css" />
+</head>
+<body class="print-page">
+<main class="container page">
+  <section class="panel">
+    <h1>Отчёт по проданным билетам ООО «Карусель»</h1>
+    <p>Дата формирования: <%= date.toLocaleDateString('ru-RU') %></p>
+
+    <form method="get" action="/admin/print-report" class="filters no-print">
+      <label>Период с
+        <input type="date" name="from" value="<%= fromDate %>" required />
+      </label>
+      <label>Период по
+        <input type="date" name="to" value="<%= toDate %>" required />
+      </label>
+      <button class="btn" type="submit">Показать</button>
+    </form>
+
+    <p>Период отчёта: <strong><%= new Date(fromDate).toLocaleDateString('ru-RU') %> — <%= new Date(toDate).toLocaleDateString('ru-RU') %></strong></p>
+    <p>Всего куплено билетов: <strong><%= Number(summary.total_tickets || 0) %></strong></p>
+    <p>Общая прибыль: <strong><%= Number(summary.total_profit || 0).toFixed(2) %> ₽</strong></p>
+    <p class="muted">Прибыль рассчитана по фактической сумме заказа из истории продаж, поэтому учитывает акции и изменения цен.</p>
+  </section>
+
+  <section class="panel">
+    <h2>Продажи по аттракционам</h2>
+    <table>
+      <thead>
+      <tr>
+        <th>Название</th>
+        <th>Куплено билетов</th>
+        <th>Прибыль</th>
+      </tr>
+      </thead>
+      <tbody>
+      <% if (!salesByAttraction.length) { %>
+        <tr>
+          <td colspan="3">За выбранный период продаж не найдено.</td>
+        </tr>
+      <% } %>
+      <% salesByAttraction.forEach(item => { %>
+        <tr>
+          <td><%= item.name %></td>
+          <td><%= Number(item.tickets_count || 0) %></td>
+          <td><%= Number(item.total_revenue || 0).toFixed(2) %> ₽</td>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table>
+  </section>
+
+  <button class="btn no-print" onclick="window.print()">Печать</button>
+</main>
+</body>
+</html>

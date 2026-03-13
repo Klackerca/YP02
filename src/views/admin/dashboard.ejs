@@ -1,0 +1,453 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+
+<main class="container page admin-page">
+  <section class="panel">
+    <h1>Панель администратора</h1>
+    <div class="admin-nav-wrap">
+      <button type="button" class="btn btn-outline admin-burger" id="adminBurger" aria-expanded="false" aria-controls="adminSectionNav">
+        Разделы
+      </button>
+      <div class="actions-row admin-nav" id="adminSectionNav">
+        <a class="btn <%= section === 'statistics' ? '' : 'btn-outline' %>" href="/admin?section=statistics">Статистика</a>
+        <a class="btn <%= section === 'attractions' ? '' : 'btn-outline' %>" href="/admin?section=attractions">Аттракционы</a>
+        <a class="btn <%= section === 'news' ? '' : 'btn-outline' %>" href="/admin?section=news">Новости</a>
+        <a class="btn <%= section === 'promotions' ? '' : 'btn-outline' %>" href="/admin?section=promotions">Акции</a>
+        <a class="btn <%= section === 'constants' ? '' : 'btn-outline' %>" href="/admin?section=constants">Справочники</a>
+        <a class="btn btn-outline" href="/admin/print-report" target="_blank">Печатная форма</a>
+        <form method="post" action="/admin/logout">
+          <button class="btn btn-outline" type="submit">Выйти</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <% if (section === 'statistics') { %>
+    <section class="stats-grid">
+      <article class="panel stat-card">
+        <h3>Посещений за день</h3>
+        <p><%= Number(stats?.visits_day || 0) %></p>
+      </article>
+      <article class="panel stat-card">
+        <h3>Посещений за месяц</h3>
+        <p><%= Number(stats?.visits_month || 0) %></p>
+      </article>
+      <article class="panel stat-card">
+        <h3>Прибыль за день</h3>
+        <p><%= Number(stats?.profit_day || 0).toFixed(2) %> ₽</p>
+      </article>
+      <article class="panel stat-card">
+        <h3>Прибыль за месяц</h3>
+        <p><%= Number(stats?.profit_month || 0).toFixed(2) %> ₽</p>
+      </article>
+    </section>
+
+    <section class="panel">
+      <h2>Самый посещаемый аттракцион</h2>
+      <div class="stats-grid">
+        <article class="panel stat-card">
+          <h3>За день</h3>
+          <p><%= topAttractionDay ? topAttractionDay.name : 'Нет данных' %></p>
+        </article>
+        <article class="panel stat-card">
+          <h3>За месяц</h3>
+          <p><%= topAttractionMonth ? topAttractionMonth.name : 'Нет данных' %></p>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Последние купленные билеты</h2>
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Аттракцион</th>
+            <th>Цена</th>
+            <th>Дата посещения</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!latestOrders.length) { %>
+            <tr>
+              <td colspan="3">Покупок пока нет.</td>
+            </tr>
+          <% } %>
+          <% latestOrders.forEach(item => { %>
+            <tr>
+              <td><%= item.attraction_name %></td>
+              <td><%= Number(item.total_price).toFixed(2) %> ₽</td>
+              <td><%= new Date(item.visit_date).toLocaleDateString('ru-RU') %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </section>
+  <% } %>
+
+  <% if (section === 'attractions') { %>
+    <section class="panel">
+      <form class="filters" method="get" action="/admin">
+        <input type="hidden" name="section" value="attractions" />
+        <input type="text" name="name" placeholder="Название" value="<%= filters?.name || '' %>" />
+        <select name="ageGroup">
+          <option value="">Возраст (все)</option>
+          <% ageGroups.forEach(group => { %>
+            <option value="<%= group.code %>" <%= filters?.ageGroup === group.code ? 'selected' : '' %>><%= group.title %></option>
+          <% }) %>
+        </select>
+        <input type="number" name="minPrice" min="0" step="0.01" placeholder="Цена от" value="<%= filters?.minPrice ?? '' %>" />
+        <input type="number" name="maxPrice" min="0" step="0.01" placeholder="Цена до" value="<%= filters?.maxPrice ?? '' %>" />
+        <button type="button" class="btn" id="openCreateAttraction">+ Новый аттракцион</button>
+        <button class="btn" type="submit">Поиск</button>
+        <a class="btn btn-outline" href="/admin?section=attractions">Сброс</a>
+      </form>
+    </section>
+
+    <section class="panel">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Название</th>
+            <th>Цена</th>
+            <th>Возраст</th>
+            <th>Мест</th>
+            <th>Действия</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% attractions.forEach(item => { %>
+            <tr>
+              <td><%= item.id %></td>
+              <td><%= item.name %></td>
+              <td><%= Number(item.ticket_price).toFixed(2) %> ₽</td>
+              <td><%= item.age_group_title %></td>
+              <td><%= item.seats_count %></td>
+              <td class="row-actions">
+                <button
+                  type="button"
+                  class="btn btn-outline js-edit-attraction"
+                  data-id="<%= item.id %>"
+                  data-name="<%= item.name %>"
+                  data-price="<%= item.ticket_price %>"
+                  data-age-group-code="<%= item.age_group_code %>"
+                  data-seats="<%= item.seats_count %>"
+                  data-image-url="<%= item.image_url || '' %>"
+                >Изменить</button>
+                <form method="post" action="/admin/attractions/<%= item.id %>/delete" onsubmit="return confirm('Удалить запись?');">
+                  <button class="btn danger" type="submit">Удалить</button>
+                </form>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </section>
+
+    <div class="modal" id="attractionModal" aria-hidden="true">
+      <div class="modal-backdrop" data-close-modal="attractionModal"></div>
+      <div class="modal-dialog panel">
+        <div class="actions-row">
+          <h2 id="attractionModalTitle">Новый аттракцион</h2>
+          <button type="button" class="btn btn-outline" data-close-modal="attractionModal">Закрыть</button>
+        </div>
+        <form method="post" action="/admin/attractions" class="stack-form" id="attractionModalForm">
+          <label>Название аттракциона
+            <input required type="text" name="name" id="attrName" />
+          </label>
+          <label>Стоимость билета
+            <input required type="number" min="0" step="0.01" name="ticket_price" id="attrPrice" />
+          </label>
+          <label>Возрастные границы (ComboBox)
+            <select required name="age_group_code" id="attrAgeGroup">
+              <option value="">Выберите группу</option>
+              <% ageGroups.forEach(group => { %>
+                <option value="<%= group.code %>"><%= group.title %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label>Количество посадочных мест
+            <input required type="number" min="1" name="seats_count" id="attrSeats" />
+          </label>
+          <label>URL изображения
+            <input type="url" name="image_url" id="attrImage" />
+          </label>
+          <button class="btn" type="submit">Сохранить</button>
+        </form>
+      </div>
+    </div>
+  <% } %>
+
+  <% if (section === 'news') { %>
+    <section class="panel">
+      <div class="actions-row">
+        <h2>Управление новостями</h2>
+        <button type="button" class="btn" id="openCreateNews">+ Новость</button>
+      </div>
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Заголовок</th>
+            <th>Статус</th>
+            <th>Дата</th>
+            <th>Действия</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% news.forEach(item => { %>
+            <tr>
+              <td><%= item.id %></td>
+              <td><%= item.title %></td>
+              <td><%= item.is_published ? 'Опубликовано' : 'Черновик' %></td>
+              <td><%= new Date(item.published_at).toLocaleDateString('ru-RU') %></td>
+              <td class="row-actions">
+                <button
+                  type="button"
+                  class="btn btn-outline js-edit-news"
+                  data-id="<%= item.id %>"
+                  data-title="<%= item.title %>"
+                  data-body="<%= item.body %>"
+                  data-image-url="<%= item.image_url || '' %>"
+                  data-published="<%= item.is_published ? '1' : '0' %>"
+                >Изменить</button>
+                <form method="post" action="/admin/news/<%= item.id %>/delete" onsubmit="return confirm('Удалить новость?');">
+                  <button class="btn danger" type="submit">Удалить</button>
+                </form>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </section>
+
+    <div class="modal" id="newsModal" aria-hidden="true">
+      <div class="modal-backdrop" data-close-modal="newsModal"></div>
+      <div class="modal-dialog panel">
+        <div class="actions-row">
+          <h2 id="newsModalTitle">Новая новость</h2>
+          <button type="button" class="btn btn-outline" data-close-modal="newsModal">Закрыть</button>
+        </div>
+        <form method="post" action="/admin/news" class="stack-form" id="newsModalForm">
+          <label>Заголовок
+            <input required type="text" name="title" id="newsTitle" />
+          </label>
+          <label>Текст новости
+            <textarea required name="body" rows="8" id="newsBody"></textarea>
+          </label>
+          <label>URL изображения
+            <input type="url" name="image_url" id="newsImage" />
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" name="is_published" value="1" id="newsPublished" checked />
+            Опубликовать
+          </label>
+          <button class="btn" type="submit">Сохранить</button>
+        </form>
+      </div>
+    </div>
+  <% } %>
+
+  <% if (section === 'promotions') { %>
+    <section class="grid constants-grid">
+      <article class="panel">
+        <h2>Добавить акцию</h2>
+        <form class="stack-form" method="post" action="/admin/promotions">
+          <label>Аттракцион
+            <select name="attraction_id" required>
+              <option value="">Выберите аттракцион</option>
+              <% promotionAttractions.forEach(item => { %>
+                <option value="<%= item.id %>"><%= item.name %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label>Название акции
+            <input type="text" name="title" required placeholder="Например: Скидка выходного дня" />
+          </label>
+          <label>Скидка (%)
+            <input type="number" name="discount_percent" min="1" max="90" step="0.01" required />
+          </label>
+          <label>Дата начала
+            <input type="date" name="starts_on" required />
+          </label>
+          <label>Дата окончания
+            <input type="date" name="ends_on" required />
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" name="is_active" value="1" checked />
+            Активна
+          </label>
+          <button class="btn" type="submit">Сохранить акцию</button>
+        </form>
+      </article>
+
+      <article class="panel">
+        <h2>Текущие акции (ListBox)</h2>
+        <select size="8" class="listbox">
+          <% promotions.forEach(item => { %>
+            <option><%= item.attraction_name %> · <%= item.discount_percent %>% · <%= item.title %></option>
+          <% }) %>
+        </select>
+
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Аттракцион</th>
+              <th>Скидка</th>
+              <th>Период</th>
+              <th>Статус</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% promotions.forEach(item => { %>
+              <tr>
+                <td><%= item.attraction_name %></td>
+                <td><%= Number(item.discount_percent).toFixed(2) %>%</td>
+                <td><%= new Date(item.starts_on).toLocaleDateString('ru-RU') %> — <%= new Date(item.ends_on).toLocaleDateString('ru-RU') %></td>
+                <td><%= item.is_active ? 'Активна' : 'Отключена' %></td>
+                <td>
+                  <form method="post" action="/admin/promotions/<%= item.id %>/delete" onsubmit="return confirm('Удалить акцию?');">
+                    <button class="btn danger" type="submit">Удалить</button>
+                  </form>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </article>
+    </section>
+  <% } %>
+
+  <% if (section === 'constants') { %>
+    <section class="grid constants-grid">
+      <article class="panel">
+        <h2>Добавить возрастную группу</h2>
+        <form class="stack-form" method="post" action="/admin/constants/age-groups">
+          <label>Код (например: 7-12)
+            <input required type="text" name="code" />
+          </label>
+          <label>Название
+            <input required type="text" name="title" />
+          </label>
+          <button class="btn" type="submit">Добавить</button>
+        </form>
+      </article>
+
+      <article class="panel">
+        <h2>Список возрастов (ListBox)</h2>
+        <select size="8" class="listbox">
+          <% ageGroups.forEach(group => { %>
+            <option><%= group.code %> — <%= group.title %></option>
+          <% }) %>
+        </select>
+
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Код</th>
+              <th>Название</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% ageGroups.forEach(group => { %>
+              <tr>
+                <td><%= group.code %></td>
+                <td><%= group.title %></td>
+                <td>
+                  <form method="post" action="/admin/constants/age-groups/<%= group.id %>/delete" onsubmit="return confirm('Удалить группу?');">
+                    <button class="btn danger" type="submit">Удалить</button>
+                  </form>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </article>
+    </section>
+  <% } %>
+</main>
+
+<script>
+  (() => {
+    const adminBurger = document.getElementById('adminBurger');
+    const adminSectionNav = document.getElementById('adminSectionNav');
+    if (adminBurger && adminSectionNav) {
+      adminBurger.addEventListener('click', () => {
+        const isOpen = adminSectionNav.classList.toggle('open');
+        adminBurger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      });
+    }
+
+    const openModal = (id) => {
+      const modal = document.getElementById(id);
+      if (!modal) return;
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden', 'false');
+    };
+
+    const closeModal = (id) => {
+      const modal = document.getElementById(id);
+      if (!modal) return;
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+    };
+
+    document.querySelectorAll('[data-close-modal]').forEach((element) => {
+      element.addEventListener('click', () => closeModal(element.dataset.closeModal));
+    });
+
+    const openCreateAttraction = document.getElementById('openCreateAttraction');
+    const attractionForm = document.getElementById('attractionModalForm');
+    const attractionTitle = document.getElementById('attractionModalTitle');
+    if (openCreateAttraction && attractionForm && attractionTitle) {
+      openCreateAttraction.addEventListener('click', () => {
+        attractionTitle.textContent = 'Новый аттракцион';
+        attractionForm.action = '/admin/attractions';
+        attractionForm.reset();
+        openModal('attractionModal');
+      });
+    }
+
+    document.querySelectorAll('.js-edit-attraction').forEach((button) => {
+      button.addEventListener('click', () => {
+        attractionTitle.textContent = 'Редактирование аттракциона';
+        attractionForm.action = `/admin/attractions/${button.dataset.id}`;
+        document.getElementById('attrName').value = button.dataset.name || '';
+        document.getElementById('attrPrice').value = button.dataset.price || '';
+        document.getElementById('attrAgeGroup').value = button.dataset.ageGroupCode || '';
+        document.getElementById('attrSeats').value = button.dataset.seats || '';
+        document.getElementById('attrImage').value = button.dataset.imageUrl || '';
+        openModal('attractionModal');
+      });
+    });
+
+    const openCreateNews = document.getElementById('openCreateNews');
+    const newsForm = document.getElementById('newsModalForm');
+    const newsTitle = document.getElementById('newsModalTitle');
+    if (openCreateNews && newsForm && newsTitle) {
+      openCreateNews.addEventListener('click', () => {
+        newsTitle.textContent = 'Новая новость';
+        newsForm.action = '/admin/news';
+        newsForm.reset();
+        document.getElementById('newsPublished').checked = true;
+        openModal('newsModal');
+      });
+    }
+
+    document.querySelectorAll('.js-edit-news').forEach((button) => {
+      button.addEventListener('click', () => {
+        newsTitle.textContent = 'Редактирование новости';
+        newsForm.action = `/admin/news/${button.dataset.id}`;
+        document.getElementById('newsTitle').value = button.dataset.title || '';
+        document.getElementById('newsBody').value = button.dataset.body || '';
+        document.getElementById('newsImage').value = button.dataset.imageUrl || '';
+        document.getElementById('newsPublished').checked = button.dataset.published === '1';
+        openModal('newsModal');
+      });
+    });
+  })();
+</script>
+
+<%- include('../partials/footer') %>

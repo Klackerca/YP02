@@ -1,0 +1,31 @@
+<%- include('./partials/head') %>
+<%- include('./partials/header') %>
+
+<main class="container page">
+  <section class="panel error-page <%= statusCode === 404 ? 'error-page-404' : 'error-page-500' %>">
+    <div class="error-content">
+      <p class="error-chip">Ошибка <%= statusCode %></p>
+      <h1><%= statusCode === 404 ? 'Ой, эта страница улетела на карусели' : 'Сервер взял небольшой тайм-аут' %></h1>
+      <p class="muted"><%= message %></p>
+      <div class="actions-row">
+        <a class="btn" href="/">На главную</a>
+        <a class="btn btn-outline" href="/attractions">К аттракционам</a>
+        <% if (session && session.admin) { %>
+          <a class="btn btn-outline" href="/admin">В админ-панель</a>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="error-visual" aria-hidden="true">
+      <img
+        src="<%= statusCode === 404
+          ? 'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=900&q=80'
+          : 'https://images.unsplash.com/photo-1470004914212-05527e49370b?auto=format&fit=crop&w=900&q=80' %>"
+        alt=""
+      />
+      <span class="error-badge"><%= statusCode === 404 ? 'Не нашли маршрут' : 'Техническая пауза' %></span>
+    </div>
+  </section>
+</main>
+
+<%- include('./partials/footer') %>

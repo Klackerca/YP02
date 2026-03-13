@@ -1,0 +1,34 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+
+<main class="container page">
+  <section class="panel form-panel">
+    <h1><%= item ? 'Редактирование новости' : 'Новая новость' %></h1>
+
+    <form method="post" action="<%= action %>" class="stack-form">
+      <label>Заголовок
+        <input required type="text" name="title" value="<%= item?.title || '' %>" />
+      </label>
+
+      <label>Текст новости
+        <textarea required name="body" rows="8"><%= item?.body || '' %></textarea>
+      </label>
+
+      <label>URL изображения
+        <input type="url" name="image_url" value="<%= item?.image_url || '' %>" />
+      </label>
+
+      <label class="checkbox">
+        <input type="checkbox" name="is_published" value="1" <%= item?.is_published ?? true ? 'checked' : '' %> />
+        Опубликовать
+      </label>
+
+      <div class="actions-row">
+        <button class="btn" type="submit">Сохранить</button>
+        <a class="btn btn-outline" href="/admin/news">Отмена</a>
+      </div>
+    </form>
+  </section>
+</main>
+
+<%- include('../partials/footer') %>

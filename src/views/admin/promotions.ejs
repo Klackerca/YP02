@@ -1,0 +1,86 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+
+<main class="container page">
+  <section class="panel">
+    <h1>Акции на билеты</h1>
+    <p class="muted">Настройка скидок по аттракционам. Для выбора аттракциона используется ComboBox.</p>
+  </section>
+
+  <section class="grid constants-grid">
+    <article class="panel">
+      <h2>Добавить акцию</h2>
+      <form class="stack-form" method="post" action="/admin/promotions">
+        <label>Аттракцион
+          <select name="attraction_id" required>
+            <option value="">Выберите аттракцион</option>
+            <% attractions.forEach(item => { %>
+              <option value="<%= item.id %>"><%= item.name %></option>
+            <% }) %>
+          </select>
+        </label>
+
+        <label>Название акции
+          <input type="text" name="title" required placeholder="Например: Скидка выходного дня" />
+        </label>
+
+        <label>Скидка (%)
+          <input type="number" name="discount_percent" min="1" max="90" step="0.01" required />
+        </label>
+
+        <label>Дата начала
+          <input type="date" name="starts_on" required />
+        </label>
+
+        <label>Дата окончания
+          <input type="date" name="ends_on" required />
+        </label>
+
+        <label class="checkbox">
+          <input type="checkbox" name="is_active" value="1" checked />
+          Активна
+        </label>
+
+        <button class="btn" type="submit">Сохранить акцию</button>
+      </form>
+    </article>
+
+    <article class="panel">
+      <h2>Текущие акции</h2>
+      <select size="8" class="listbox">
+        <% promotions.forEach(item => { %>
+          <option><%= item.attraction_name %> · <%= item.discount_percent %>% · <%= item.title %></option>
+        <% }) %>
+      </select>
+
+      <table>
+        <thead>
+        <tr>
+          <th>Аттракцион</th>
+          <th>Скидка</th>
+          <th>Период</th>
+          <th>Статус</th>
+          <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        <% promotions.forEach(item => { %>
+          <tr>
+            <td><%= item.attraction_name %></td>
+            <td><%= Number(item.discount_percent).toFixed(2) %>%</td>
+            <td><%= new Date(item.starts_on).toLocaleDateString('ru-RU') %> — <%= new Date(item.ends_on).toLocaleDateString('ru-RU') %></td>
+            <td><%= item.is_active ? 'Активна' : 'Отключена' %></td>
+            <td>
+              <form method="post" action="/admin/promotions/<%= item.id %>/delete" onsubmit="return confirm('Удалить акцию?');">
+                <button class="btn danger" type="submit">Удалить</button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+        </tbody>
+      </table>
+    </article>
+  </section>
+</main>
+
+<%- include('../partials/footer') %>

@@ -1,0 +1,58 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+
+<main class="container page">
+  <section class="panel">
+    <h1>Справочники и константы</h1>
+    <p class="muted">Эта форма хранит постоянные значения (возрастные группы), используемые в ComboBox и фильтрах.</p>
+  </section>
+
+  <section class="grid constants-grid">
+    <article class="panel">
+      <h2>Добавить возрастную группу</h2>
+      <form class="stack-form" method="post" action="/admin/constants/age-groups">
+        <label>Код (например: 7-12)
+          <input required type="text" name="code" />
+        </label>
+        <label>Название
+          <input required type="text" name="title" />
+        </label>
+        <button class="btn" type="submit">Добавить</button>
+      </form>
+    </article>
+
+    <article class="panel">
+      <h2>Список возрастов</h2>
+      <select size="8" class="listbox">
+        <% ageGroups.forEach(group => { %>
+          <option><%= group.code %> — <%= group.title %></option>
+        <% }) %>
+      </select>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Код</th>
+            <th>Название</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <% ageGroups.forEach(group => { %>
+            <tr>
+              <td><%= group.code %></td>
+              <td><%= group.title %></td>
+              <td>
+                <form method="post" action="/admin/constants/age-groups/<%= group.id %>/delete" onsubmit="return confirm('Удалить группу?');">
+                  <button class="btn danger" type="submit">Удалить</button>
+                </form>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </article>
+  </section>
+</main>
+
+<%- include('../partials/footer') %>

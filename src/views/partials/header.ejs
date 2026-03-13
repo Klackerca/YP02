@@ -1,0 +1,33 @@
+<header class="site-header">
+  <div class="container nav-wrap">
+    <a class="logo" href="/">Карусель</a>
+    <% const isAdminSession = session && session.admin; %>
+    <% if (!isAdminSession) { %>
+      <button type="button" class="btn btn-outline site-burger" id="siteBurger" aria-expanded="false" aria-controls="siteNav">
+        Меню
+      </button>
+    <% } %>
+
+    <nav class="nav site-nav <%= !isAdminSession ? 'is-public' : '' %>" id="siteNav">
+      <a href="/">Главная</a>
+      <a href="/attractions">Аттракционы</a>
+      <a href="/news">Новости</a>
+      <% if (isAdminSession) { %>
+        <a href="/admin">Админ-панель</a>
+      <% } %>
+    </nav>
+  </div>
+</header>
+
+<script>
+  (() => {
+    const siteBurger = document.getElementById('siteBurger');
+    const siteNav = document.getElementById('siteNav');
+    if (!siteBurger || !siteNav) return;
+
+    siteBurger.addEventListener('click', () => {
+      const isOpen = siteNav.classList.toggle('open');
+      siteBurger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    });
+  })();
+</script>

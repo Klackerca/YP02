@@ -1,0 +1,24 @@
+<%- include('../partials/head') %>
+<%- include('../partials/header') %>
+
+<main class="container page">
+  <section>
+    <h1>Новости парка</h1>
+    <div class="grid cards-2">
+      <% news.forEach(item => { %>
+        <article class="card">
+          <img src="<%= item.image_url || 'https://images.unsplash.com/photo-1521337581100-8ca9a73a5f79?auto=format&fit=crop&w=1200&q=80' %>" alt="<%= item.title %>" />
+          <div class="card-body">
+            <h2><%= item.title %></h2>
+            <p class="muted"><%= new Date(item.published_at).toLocaleDateString('ru-RU') %></p>
+            <% const plainBody = (item.body || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim(); %>
+            <p><%= plainBody.slice(0, 220) %>...</p>
+            <a class="btn btn-outline" href="/news/<%= item.id %>">Читать полностью</a>
+          </div>
+        </article>
+      <% }) %>
+    </div>
+  </section>
+</main>
+
+<%- include('../partials/footer') %>
