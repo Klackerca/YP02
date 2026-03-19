@@ -6,6 +6,196 @@ const { normalizeFilters, buildAttractionsWhere } = require('../services/reportS
 
 const router = express.Router();
 
+const DEFAULT_PROMOTION_FORM = {
+  attraction_id: '',
+  title: '',
+  discount_percent: '',
+  starts_on: '',
+  ends_on: '',
+  is_active: true
+};
+
+function buildPromotionForm(source = {}) {
+  return {
+    attraction_id: source.attraction_id?.toString() || '',
+    title: (source.title || '').toString(),
+    discount_percent: source.discount_percent?.toString() || '',
+    starts_on: (source.starts_on_value || source.starts_on || '').toString(),
+    ends_on: (source.ends_on_value || source.ends_on || '').toString(),
+    is_active: source.is_active === undefined ? true : Boolean(Number(source.is_active))
+  };
+}
+
+async function loadPromotionsData(options = {}) {
+  const [promotionAttractions] = await pool.query('SELECT id, name FROM attractions ORDER BY name');
+  const [promotions] = await pool.query(
+    `SELECT p.*, a.name AS attraction_name,
+            DATE_FORMAT(p.starts_on, '%Y-%m-%d') AS starts_on_value,
+            DATE_FORMAT(p.ends_on, '%Y-%m-%d') AS ends_on_value
+     FROM promotions p
+     JOIN attractions a ON a.id = p.attraction_id
+     ORDER BY p.created_at DESC`
+  );
+
+  let promotionForm = { ...DEFAULT_PROMOTION_FORM };
+  let promotionEditId = null;
+
+  if (options.editPromotionId) {
+    const promotionToEdit = promotions.find((item) => item.id === Number(options.editPromotionId));
+    if (promotionToEdit) {
+      promotionForm = buildPromotionForm(promotionToEdit);
+      promotionEditId = promotionToEdit.id;
+    }
+  }
+
+  if (options.promotionForm) {
+    promotionForm = {
+      ...promotionForm,
+      ...buildPromotionForm(options.promotionForm)
+    };
+  }
+
+  if (options.promotionEditId) {
+    promotionEditId = Number(options.promotionEditId);
+  }
+
+  return {
+    promotionAttractions,
+    promotions,
+    promotionForm,
+    promotionEditId,
+    promotionError: options.promotionError || null
+  };
+}
+
+async function renderPromotionsDashboard(res, options = {}) {
+  const promotionData = await loadPromotionsData(options);
+
+  return res.status(options.statusCode || 200).render('admin/dashboard', {
+    title: 'Панель администратора',
+    section: 'promotions',
+    stats: null,
+    topAttractionDay: null,
+    topAttractionMonth: null,
+    latestOrders: [],
+    filters: null,
+    attractions: [],
+    ageGroups: [],
+    news: [],
+    ...promotionData
+  });
+}
+
+async function renderPromotionsPage(res, options = {}) {
+  const promotionData = await loadPromotionsData(options);
+
+  return res.status(options.statusCode || 200).render('admin/promotions', {
+    title: 'Акции на билеты',
+    attractions: promotionData.promotionAttractions,
+    promotions: promotionData.promotions,
+    promotionForm: promotionData.promotionForm,
+    promotionEditId: promotionData.promotionEditId,
+    promotionError: promotionData.promotionError
+  });
+}
+
+function validatePromotionForm(form) {
+  const attractionId = Number(form.attraction_id);
+  const discountPercent = Number(form.discount_percent);
+
+  if (!attractionId) {
+    return 'Выберите аттракцион для акции.';
+  }
+
+  if (!form.title.trim()) {
+    return 'Укажите название акции.';
+  }
+
+  if (!Number.isFinite(discountPercent) || discountPercent < 1 || discountPercent > 90) {
+    return 'Скидка должна быть в диапазоне от 1 до 90%.';
+  }
+
+  if (!form.starts_on || !form.ends_on) {
+    return 'Укажите период действия акции.';
+  }
+
+  if (form.starts_on > form.ends_on) {
+    return 'Дата окончания акции не может быть раньше даты начала.';
+  }
+
+  return null;
+}
+
+async function findPromotionOverlap({ attractionId, startsOn, endsOn, excludePromotionId = null }) {
+  const params = [attractionId, startsOn, endsOn];
+  let query =
+    `SELECT id, title,
+            DATE_FORMAT(starts_on, '%Y-%m-%d') AS starts_on_value,
+            DATE_FORMAT(ends_on, '%Y-%m-%d') AS ends_on_value
+     FROM promotions
+     WHERE attraction_id = ?
+       AND NOT (ends_on < ? OR starts_on > ?)`;
+
+  if (excludePromotionId) {
+    query += ' AND id <> ?';
+    params.push(excludePromotionId);
+  }
+
+  query += ' LIMIT 1';
+
+  const [rows] = await pool.query(query, params);
+  return rows[0] || null;
+}
+
+async function savePromotion(form, promotionId = null) {
+  const overlap = await findPromotionOverlap({
+    attractionId: Number(form.attraction_id),
+    startsOn: form.starts_on,
+    endsOn: form.ends_on,
+    excludePromotionId: promotionId
+  });
+
+  if (overlap) {
+    return {
+      error: `Для этого аттракциона уже есть акция на пересекающийся период: ${overlap.starts_on_value} - ${overlap.ends_on_value}.`
+    };
+  }
+
+  if (promotionId) {
+    await pool.query(
+      `UPDATE promotions
+       SET attraction_id = ?, title = ?, discount_percent = ?, starts_on = ?, ends_on = ?, is_active = ?
+       WHERE id = ?`,
+      [
+        Number(form.attraction_id),
+        form.title.trim(),
+        Number(form.discount_percent),
+        form.starts_on,
+        form.ends_on,
+        form.is_active ? 1 : 0,
+        promotionId
+      ]
+    );
+
+    return { error: null };
+  }
+
+  await pool.query(
+    `INSERT INTO promotions (attraction_id, title, discount_percent, starts_on, ends_on, is_active)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [
+      Number(form.attraction_id),
+      form.title.trim(),
+      Number(form.discount_percent),
+      form.starts_on,
+      form.ends_on,
+      form.is_active ? 1 : 0
+    ]
+  );
+
+  return { error: null };
+}
+
 router.get('/login', (req, res) => {
   if (req.session.admin) {
     return res.redirect('/admin');
@@ -65,6 +255,9 @@ router.get('/', requireAdmin, async (req, res, next) => {
 
     let promotionAttractions = [];
     let promotions = [];
+    let promotionForm = { ...DEFAULT_PROMOTION_FORM };
+    let promotionEditId = null;
+    let promotionError = null;
 
     if (section === 'statistics') {
       const [statsRows] = await pool.query(
@@ -140,13 +333,9 @@ router.get('/', requireAdmin, async (req, res, next) => {
     }
 
     if (section === 'promotions') {
-      [promotionAttractions] = await pool.query('SELECT id, name FROM attractions ORDER BY name');
-      [promotions] = await pool.query(
-        `SELECT p.*, a.name AS attraction_name
-         FROM promotions p
-         JOIN attractions a ON a.id = p.attraction_id
-         ORDER BY p.created_at DESC`
-      );
+      ({ promotionAttractions, promotions, promotionForm, promotionEditId, promotionError } = await loadPromotionsData({
+        editPromotionId: req.query.editPromotionId
+      }));
     }
 
     if (section === 'constants') {
@@ -165,7 +354,10 @@ router.get('/', requireAdmin, async (req, res, next) => {
       ageGroups,
       news,
       promotionAttractions,
-      promotions
+      promotions,
+      promotionForm,
+      promotionEditId,
+      promotionError
     });
   } catch (error) {
     next(error);
@@ -350,18 +542,8 @@ router.post('/news/:id/delete', requireAdmin, async (req, res, next) => {
 
 router.get('/promotions', requireAdmin, async (req, res, next) => {
   try {
-    const [attractions] = await pool.query('SELECT id, name FROM attractions ORDER BY name');
-    const [promotions] = await pool.query(
-      `SELECT p.*, a.name AS attraction_name
-       FROM promotions p
-       JOIN attractions a ON a.id = p.attraction_id
-       ORDER BY p.created_at DESC`
-    );
-
-    return res.render('admin/promotions', {
-      title: 'Акции на билеты',
-      attractions,
-      promotions
+    return renderPromotionsPage(res, {
+      editPromotionId: req.query.editPromotionId
     });
   } catch (error) {
     next(error);
@@ -370,12 +552,63 @@ router.get('/promotions', requireAdmin, async (req, res, next) => {
 
 router.post('/promotions', requireAdmin, async (req, res, next) => {
   try {
-    const { attraction_id, title, discount_percent, starts_on, ends_on, is_active } = req.body;
-    await pool.query(
-      `INSERT INTO promotions (attraction_id, title, discount_percent, starts_on, ends_on, is_active)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [attraction_id, title, discount_percent, starts_on, ends_on, is_active ? 1 : 0]
-    );
+    const promotionForm = buildPromotionForm(req.body);
+    const validationError = validatePromotionForm(promotionForm);
+
+    if (validationError) {
+      return renderPromotionsDashboard(res, {
+        statusCode: 400,
+        promotionError: validationError,
+        promotionForm
+      });
+    }
+
+    const saveResult = await savePromotion(promotionForm);
+    if (saveResult.error) {
+      return renderPromotionsDashboard(res, {
+        statusCode: 400,
+        promotionError: saveResult.error,
+        promotionForm
+      });
+    }
+
+    return res.redirect('/admin?section=promotions');
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/promotions/:id', requireAdmin, async (req, res, next) => {
+  try {
+    const promotionId = Number(req.params.id);
+    const [[promotion]] = await pool.query('SELECT id FROM promotions WHERE id = ? LIMIT 1', [promotionId]);
+
+    if (!promotion) {
+      return res.status(404).send('Акция не найдена');
+    }
+
+    const promotionForm = buildPromotionForm(req.body);
+    const validationError = validatePromotionForm(promotionForm);
+
+    if (validationError) {
+      return renderPromotionsDashboard(res, {
+        statusCode: 400,
+        promotionError: validationError,
+        promotionForm,
+        promotionEditId: promotionId
+      });
+    }
+
+    const saveResult = await savePromotion(promotionForm, promotionId);
+    if (saveResult.error) {
+      return renderPromotionsDashboard(res, {
+        statusCode: 400,
+        promotionError: saveResult.error,
+        promotionForm,
+        promotionEditId: promotionId
+      });
+    }
+
     return res.redirect('/admin?section=promotions');
   } catch (error) {
     next(error);
